@@ -11,9 +11,7 @@ import sys
 import torch
 import triton
 
-# Make the project root importable when run as a plain script.
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from kernels import vector_add
 
 

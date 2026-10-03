@@ -5,10 +5,14 @@ Run with::
     python benchmarks/bench_vector_subtract.py
 """
 
+import os
+import sys
+
 import torch
 import triton
 
-from kernels import vector_add
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from kernels import vector_subtract
 
 
 @triton.testing.perf_report(
@@ -42,4 +46,10 @@ def benchmark(size, provider):
 
 
 if __name__ == "__main__":
-    benchmark.run(print_data=True, show_plots=False)
+    out_dir = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "benchmark_outputs",
+    )
+    os.makedirs(out_dir, exist_ok=True)
+    benchmark.run(print_data=True, show_plots=False, save_path=out_dir)
+    print(f"\nSaved results (.png + .csv) to {out_dir}")
