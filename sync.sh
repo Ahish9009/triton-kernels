@@ -6,6 +6,7 @@
 #   ./sync.sh pull          copy remote -> local (additive; brings back results)
 #   ./sync.sh run [cmd...]  run a command in the remote repo inside the env
 #                           (default: pytest -q)
+#   ./sync.sh gpus          show GPU usage on the remote (to find a free one)
 #
 # Override the target with env vars:
 #   REMOTE_HOST=ahishd@trinity.vision.cs.cmu.edu
@@ -41,8 +42,14 @@ case "${cmd}" in
     ssh -t "${REMOTE_HOST}" \
       "cd '${REMOTE_DIR}' && conda run --no-capture-output -n '${ENV_NAME}' ${remote_cmd}"
     ;;
+  gpus)
+    echo ">> GPU usage on ${REMOTE_HOST}:"
+    ssh "${REMOTE_HOST}" \
+      "nvidia-smi --query-gpu=index,name,memory.used,memory.total,utilization.gpu \
+         --format=csv,nounits"
+    ;;
   *)
-    echo "usage: $0 [push|pull|run [cmd...]]" >&2
+    echo "usage: $0 [push|pull|run [cmd...]|gpus]" >&2
     exit 1
     ;;
 esac

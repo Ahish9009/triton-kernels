@@ -48,7 +48,8 @@ install, and runs the suite.
 ### Day-to-day workflow
 
 ```bash
-./sync.sh push                 # push local edits to the server
+./sync.sh push                 # push local edits to the server (shared NFS: visible on all nodes)
+./sync.sh gpus                 # check which GPUs are free before launching
 ./sync.sh run                  # run `pytest -q` on the server in the env
 ./sync.sh run python benchmarks/bench_vector_add.py   # or any command
 ./sync.sh pull                 # bring results/artifacts back locally
