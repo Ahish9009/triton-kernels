@@ -55,11 +55,15 @@ install, and runs the suite.
 ./sync.sh pull                 # bring results/artifacts back locally
 ```
 
-Override the target without editing the script:
+Files sync to the **login node** (`trinity.vision.cs.cmu.edu`); thanks to
+shared NFS they're then visible on every node. Commands (`run`/`gpus`) execute
+on the **compute node** (`trinity-0-3`), reached automatically by jumping
+through the login node (SSH `ProxyJump`). Override either target:
 
 ```bash
-REMOTE_HOST=user@host REMOTE_DIR=some/dir ./sync.sh push
+REMOTE_HOST=ahishd@login   COMPUTE_HOST=ahishd@trinity-0-5   ./sync.sh run pytest -q
 ```
 
-> Tip: run `ssh-copy-id ahishd@trinity.vision.cs.cmu.edu` once for
-> passwordless sync.
+> Tip: `ssh-copy-id ahishd@trinity.vision.cs.cmu.edu` once gives passwordless
+> sync (and passwordless jumps to the compute node, since the login node is the
+> jump host).

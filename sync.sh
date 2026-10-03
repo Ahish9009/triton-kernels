@@ -8,13 +8,18 @@
 #                           (default: pytest -q)
 #   ./sync.sh gpus          show GPU usage on the remote (to find a free one)
 #
-# Override the target with env vars:
-#   REMOTE_HOST=ahishd@trinity.vision.cs.cmu.edu
-#   REMOTE_DIR=triton-kernels   (relative to the remote home dir)
+# Files sync to the LOGIN node (shared NFS home -> visible on every node).
+# Commands run on the COMPUTE node, reached by jumping through the login node.
+#
+# Override the targets with env vars:
+#   REMOTE_HOST=ahishd@trinity.vision.cs.cmu.edu   (login node, for file sync)
+#   COMPUTE_HOST=ahishd@trinity-0-3                 (compute node, for run/gpus)
+#   REMOTE_DIR=triton-kernels                       (relative to the remote home dir)
 #
 set -euo pipefail
 
 REMOTE_HOST="${REMOTE_HOST:-ahishd@trinity.vision.cs.cmu.edu}"
+COMPUTE_HOST="${COMPUTE_HOST:-ahishd@trinity-0-3}"
 REMOTE_DIR="${REMOTE_DIR:-triton-kernels}"
 ENV_NAME="${ENV_NAME:-triton-kernels}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -38,13 +43,13 @@ case "${cmd}" in
     ;;
   run)
     remote_cmd="${*:-pytest -q}"
-    echo ">> run on ${REMOTE_HOST}: ${remote_cmd}"
-    ssh -t "${REMOTE_HOST}" \
+    echo ">> run on ${COMPUTE_HOST} (via ${REMOTE_HOST}): ${remote_cmd}"
+    ssh -t -J "${REMOTE_HOST}" "${COMPUTE_HOST}" \
       "cd '${REMOTE_DIR}' && conda run --no-capture-output -n '${ENV_NAME}' ${remote_cmd}"
     ;;
   gpus)
-    echo ">> GPU usage on ${REMOTE_HOST}:"
-    ssh "${REMOTE_HOST}" \
+    echo ">> GPU usage on ${COMPUTE_HOST} (via ${REMOTE_HOST}):"
+    ssh -J "${REMOTE_HOST}" "${COMPUTE_HOST}" \
       "nvidia-smi --query-gpu=index,name,memory.used,memory.total,utilization.gpu \
          --format=csv,nounits"
     ;;
