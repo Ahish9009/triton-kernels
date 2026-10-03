@@ -45,7 +45,7 @@ def _matmul_naive_kernel(
 
 
 def matmul_naive(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-    """Return ``x + y`` computed on the GPU with a Triton kernel."""
+    """Return ``x @ y`` computed on the GPU with a Triton kernel."""
     a,b = x.shape
     p,q = y.shape
     out = torch.empty((a,q), device="cuda")
@@ -54,5 +54,5 @@ def matmul_naive(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     n_x, n_y = out.shape
 
     grid = lambda meta: (a,q)
-    _matmul_naive_kernel[grid](x, y, out, b, q, a*b, p*q, a*q, BLOCK_SIZE_X=64, BLOCK_SIZE_Y=64)
+    _matmul_naive_kernel[grid](x, y, out, b, q, a*b, p*q, a*q, BLOCK_SIZE_X=256, BLOCK_SIZE_Y=256)
     return out
