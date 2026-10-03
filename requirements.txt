@@ -1,0 +1,10 @@
+# Core
+torch
+numpy
+
+# Triton — Linux + GPU only; no macOS wheels.
+# On a CUDA machine, uncomment:
+# triton
+
+# Testing
+pytest
