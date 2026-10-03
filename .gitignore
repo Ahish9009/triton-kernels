@@ -27,6 +27,8 @@ env/
 .DS_Store
 .vscode/
 .idea/
+*.swp
+*.swo
 
 # Benchmark results (generated; pulled back from the server)
 benchmark_outputs/
