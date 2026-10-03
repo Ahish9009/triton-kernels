@@ -29,18 +29,36 @@ conda activate triton-kernels
 
 ## Running on the remote GPU server
 
-On the CUDA machine, create the env and install the full toolchain:
+Sync the repo to the server and set up the env — one command each:
 
 ```bash
-conda create -y -n triton-kernels python=3.11
-conda activate triton-kernels
-pip install -r requirements.txt
-pip install triton        # Linux + GPU only
+./sync.sh push     # mirror this repo to ahishd@trinity.vision.cs.cmu.edu
 ```
 
-Then, from the repo root:
+Then, on the server, from the repo root, run the setup script once:
 
 ```bash
-pytest                              # run correctness tests
-python benchmarks/bench_vector_add.py   # run a benchmark
+./setup.sh         # creates the conda env, installs Triton, runs the tests
 ```
+
+`setup.sh` builds the `triton-kernels` conda env from `environment.yml`,
+installs Triton (GPU-only, not in the portable env file), verifies the
+install, and runs the suite.
+
+### Day-to-day workflow
+
+```bash
+./sync.sh push                 # push local edits to the server
+./sync.sh run                  # run `pytest -q` on the server in the env
+./sync.sh run python benchmarks/bench_vector_add.py   # or any command
+./sync.sh pull                 # bring results/artifacts back locally
+```
+
+Override the target without editing the script:
+
+```bash
+REMOTE_HOST=user@host REMOTE_DIR=some/dir ./sync.sh push
+```
+
+> Tip: run `ssh-copy-id ahishd@trinity.vision.cs.cmu.edu` once for
+> passwordless sync.
