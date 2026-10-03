@@ -1,4 +1,4 @@
-"""Element-wise vector addition in Triton.
+"""Element-wise vector subtraction in Triton.
 """
 
 import torch

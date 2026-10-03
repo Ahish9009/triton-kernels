@@ -1,69 +1,55 @@
 # triton-kernels
 
-A collection of GPU kernels written in [Triton](https://github.com/triton-lang/triton).
+GPU kernels written in [Triton](https://github.com/triton-lang/triton), each with a
+correctness test and a benchmark against its PyTorch baseline.
+
+Benchmarks below were measured on a single **NVIDIA RTX 6000 Ada** (48 GB).
+
+## Kernels
+
+| Kernel | Op | Source | Test | Benchmark |
+|--------|----|--------|------|-----------|
+| `vector_add` | `x + y` | [vector_add.py](kernels/vector_add.py) | [test](tests/test_vector_add.py) | [bench](benchmarks/bench_vector_add.py) |
+| `vector_subtract` | `x - y` | [vector_subtract.py](kernels/vector_subtract.py) | [test](tests/test_vector_subtract.py) | [bench](benchmarks/bench_vector_subtract.py) |
+
+### `vector_add` — element-wise `x + y`
+
+Both Triton and PyTorch are memory-bandwidth-bound and plateau around ~815 GB/s —
+as expected for an op that does one add per two loads and a store.
+
+![vector_add benchmark](docs/vector-add-performance.png)
+
+### `vector_subtract` — element-wise `x - y`
+
+Same bandwidth-bound profile as add; the Triton kernel matches the PyTorch baseline.
+
+![vector_subtract benchmark](docs/vector-subtract-performance.png)
 
 ## Layout
 
 ```
-kernels/      # Triton kernel implementations (one module per kernel)
-tests/        # Correctness tests (pytest; auto-skip without a CUDA GPU)
-benchmarks/   # Performance benchmarks vs. PyTorch baselines
+kernels/              # kernel implementations (one module per kernel)
+tests/                # pytest correctness tests (auto-skip without a GPU)
+benchmarks/           # benchmarks vs. PyTorch; plots -> benchmark_outputs/
+docs/                 # plots shown in this README
 ```
 
-Each kernel follows the same pattern: the implementation lives in `kernels/`,
-a correctness test in `tests/`, and a benchmark in `benchmarks/`. See
-`vector_add` for the reference example.
+## Usage
 
-## Development (this machine)
-
-Triton ships **Linux + GPU wheels only** — there is no macOS build, so it
-can't be installed or run locally on a Mac. Develop here, run on the GPU
-server (below).
-
-A conda env with Python, PyTorch, and pytest is set up for editing and
-linting:
+Triton ships Linux + GPU wheels only, so kernels run on the GPU server rather than
+locally. `sync.sh` handles the round trip (files sync to the login node over shared
+NFS; commands run on the compute node via SSH `ProxyJump`):
 
 ```bash
-conda activate triton-kernels
+./sync.sh push                                    # copy code to the server
+./sync.sh gpus                                    # check which GPUs are free
+./sync.sh run pytest -q                           # run the tests
+./sync.sh run python benchmarks/bench_vector_add.py   # run a benchmark
+./sync.sh pull                                    # bring plots/results back
 ```
 
-## Running on the remote GPU server
+Benchmarks auto-save a `.png` and `.csv` into `benchmark_outputs/`.
 
-Sync the repo to the server and set up the env — one command each:
-
-```bash
-./sync.sh push     # mirror this repo to ahishd@trinity.vision.cs.cmu.edu
-```
-
-Then, on the server, from the repo root, run the setup script once:
-
-```bash
-./setup.sh         # creates the conda env, installs Triton, runs the tests
-```
-
-`setup.sh` builds the `triton-kernels` conda env from `environment.yml`,
-installs Triton (GPU-only, not in the portable env file), verifies the
-install, and runs the suite.
-
-### Day-to-day workflow
-
-```bash
-./sync.sh push                 # push local edits to the server (shared NFS: visible on all nodes)
-./sync.sh gpus                 # check which GPUs are free before launching
-./sync.sh run                  # run `pytest -q` on the server in the env
-./sync.sh run python benchmarks/bench_vector_add.py   # or any command
-./sync.sh pull                 # bring results/artifacts back locally
-```
-
-Files sync to the **login node** (`trinity.vision.cs.cmu.edu`); thanks to
-shared NFS they're then visible on every node. Commands (`run`/`gpus`) execute
-on the **compute node** (`trinity-0-3`), reached automatically by jumping
-through the login node (SSH `ProxyJump`). Override either target:
-
-```bash
-REMOTE_HOST=ahishd@login   COMPUTE_HOST=ahishd@trinity-0-5   ./sync.sh run pytest -q
-```
-
-> Tip: `ssh-copy-id ahishd@trinity.vision.cs.cmu.edu` once gives passwordless
-> sync (and passwordless jumps to the compute node, since the login node is the
-> jump host).
+First-time server setup is one command (`./setup.sh`): it builds the
+`triton-kernels` conda env from `environment.yml`, installs Triton, and runs the
+tests. See [setup.sh](setup.sh) and [sync.sh](sync.sh) for details.
