@@ -2,6 +2,10 @@
 torch
 numpy
 
+# Benchmarking (triton.testing uses pandas; matplotlib for plots)
+pandas
+matplotlib
+
 # Triton — Linux + GPU only; no macOS wheels.
 # On a CUDA machine, uncomment:
 # triton
