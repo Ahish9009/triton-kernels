@@ -11,6 +11,7 @@ Benchmarks below were measured on a single **NVIDIA RTX 6000 Ada** (48 GB).
 |--------|----|--------|------|-----------|
 | `vector_add` | `x + y` | [vector_add.py](kernels/vector_add.py) | [test](tests/test_vector_add.py) | [bench](benchmarks/bench_vector_add.py) |
 | `vector_subtract` | `x - y` | [vector_subtract.py](kernels/vector_subtract.py) | [test](tests/test_vector_subtract.py) | [bench](benchmarks/bench_vector_subtract.py) |
+| `matmul_naive` | `A @ B` | [matmul_naive.py](kernels/matmul_naive.py) | [test](tests/test_matmul_naive.py) | [bench](benchmarks/bench_matmul_naive.py) |
 
 ### `vector_add` — element-wise `x + y`
 
@@ -24,6 +25,16 @@ as expected for an op that does one add per two loads and a store.
 Same bandwidth-bound profile as add; the Triton kernel matches the PyTorch baseline.
 
 ![vector_subtract benchmark](docs/vector-subtract-performance.png)
+
+### `matmul_naive` — matrix multiply `A @ B`
+
+A straightforward first-pass matmul: one program instance per output element,
+each looping over the shared inner dimension in `BLOCK_SIZE` chunks and
+accumulating the dot product. It's correctness-first and not tiled/blocked for
+data reuse, so it trails PyTorch's cuBLAS-backed `@` — the plot shows the gap a
+naive implementation leaves on the table (and the baseline to optimize against).
+
+![matmul_naive benchmark](docs/matmul_naive-performance.png)
 
 ## Layout
 
