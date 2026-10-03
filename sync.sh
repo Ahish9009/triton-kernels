@@ -24,8 +24,18 @@ REMOTE_DIR="${REMOTE_DIR:-triton-kernels}"
 ENV_NAME="${ENV_NAME:-triton-kernels}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Respect .gitignore so caches, venvs, and build artifacts never transfer.
-COMMON_OPTS=(-az --info=progress2 --exclude='.git/' --filter=':- .gitignore')
+# push: mirror local -> remote, respecting .gitignore so caches / venvs /
+# build artifacts never transfer.
+PUSH_OPTS=(-az --info=progress2 --exclude='.git/' --filter=':- .gitignore')
+
+# pull: bring results back (incl. gitignored benchmark_outputs/), but skip
+# caches and .git so they don't pollute the local tree.
+PULL_OPTS=(-az --info=progress2
+  --exclude='.git/'
+  --exclude='__pycache__/'
+  --exclude='.pytest_cache/'
+  --exclude='*.pyc'
+)
 
 cmd="${1:-push}"
 shift || true
@@ -33,12 +43,12 @@ shift || true
 case "${cmd}" in
   push)
     echo ">> push  ${SCRIPT_DIR}/  ->  ${REMOTE_HOST}:${REMOTE_DIR}/"
-    rsync "${COMMON_OPTS[@]}" --delete \
+    rsync "${PUSH_OPTS[@]}" --delete \
       "${SCRIPT_DIR}/" "${REMOTE_HOST}:${REMOTE_DIR}/"
     ;;
   pull)
     echo ">> pull  ${REMOTE_HOST}:${REMOTE_DIR}/  ->  ${SCRIPT_DIR}/"
-    rsync "${COMMON_OPTS[@]}" \
+    rsync "${PULL_OPTS[@]}" \
       "${REMOTE_HOST}:${REMOTE_DIR}/" "${SCRIPT_DIR}/"
     ;;
   run)
