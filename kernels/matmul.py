@@ -21,8 +21,6 @@ def _matmul_kernel(
     BLOCK_SIZE_X: tl.constexpr,
     BLOCK_SIZE_Y: tl.constexpr,
     BLOCK_SIZE_K: tl.constexpr,
-    num_stages=4,
-    num_warps=8
 ):
     pid_r = tl.program_id(axis=0)
     pid_c = tl.program_id(axis=1)
@@ -79,9 +77,11 @@ def matmul(A: torch.Tensor, B: torch.Tensor) -> torch.Tensor:
             B.stride(0), B.stride(1), 
             C.stride(0), C.stride(1), 
             a, b, q,
-            BLOCK_SIZE_X=64,
-            BLOCK_SIZE_Y=64,
-            BLOCK_SIZE_K=64
+            BLOCK_SIZE_X=128,
+            BLOCK_SIZE_Y=128,
+            BLOCK_SIZE_K=32,
+            num_stages=5,
+            num_warps=8
     )
     return C
 
