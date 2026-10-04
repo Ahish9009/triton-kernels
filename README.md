@@ -43,11 +43,15 @@ A proper tiled implementation: each program computes a `BLOCK_SIZE_Y × BLOCK_SI
 output tile, looping over the inner dimension in `BLOCK_SIZE_K` chunks and
 accumulating in registers with `tl.dot` (TF32 tensor cores). Because every loaded
 tile is reused across the whole output block, it's compute-bound rather than
-bandwidth-bound, and larger tiles improve the reuse further. It tracks PyTorch's
-cuBLAS `@` closely through the mid sizes and trails only at the largest matrices,
-where cuBLAS's deeper pipelining and per-shape tuning still win.
+bandwidth-bound.
 
-![matmul benchmark](docs/matmul-performance.png)
+Block-size tuning trades performance across the size range — no single tile shape
+is best everywhere. The config that tracks PyTorch's cuBLAS `@` best at the mid
+sizes isn't the one that tracks best at the largest matrices:
+
+| Block config A | Block config B (better at large sizes) |
+|:---:|:---:|
+| ![matmul config A](docs/matmul-blocks-a.png) | ![matmul config B](docs/matmul-blocks-b.png) |
 
 ## Layout
 
