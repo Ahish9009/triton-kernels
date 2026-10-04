@@ -54,18 +54,15 @@ sizes isn't the one that tracks best at the largest matrices:
 | ![matmul config A](docs/matmul-blocks-a.png) | ![matmul config B](docs/matmul-blocks-b.png) |
 
 A single hand-tuned config (64×128 tile, `BLOCK_SIZE_K=64`, `GROUP_SIZE_M=1`,
-`num_stages=3`, `num_warps=8`) — the smaller tile keeps enough program instances
-in flight to fill the SMs at mid sizes, tracking cuBLAS closely and peaking
-slightly above it around 1024:
+`num_stages=3`, `num_warps=8`) already tracks cuBLAS closely — the smaller tile
+keeps enough program instances in flight to fill the SMs at mid sizes. The kernel
+now goes further with `@triton.autotune`, which benchmarks a set of block-size /
+`num_stages` / `num_warps` configs per problem shape and caches the fastest, so no
+single config has to win everywhere:
 
-![matmul tuned config](docs/matmul-blocks-c.png)
-
-**Autotuned.** The kernel now uses `@triton.autotune`, which benchmarks a set of
-block-size / `num_stages` / `num_warps` configs per problem shape and caches the
-fastest — picking the smaller tiles at mid sizes and the larger tiles at big sizes
-automatically, so no single config has to win everywhere:
-
-![autotuned matmul](docs/matmul-autotuned.png)
+| Single tuned config | Autotuned (per shape) |
+|:---:|:---:|
+| ![matmul tuned config](docs/matmul-blocks-c.png) | ![autotuned matmul](docs/matmul-autotuned.png) |
 
 ## Layout
 
