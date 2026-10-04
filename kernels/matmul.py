@@ -21,9 +21,19 @@ def _matmul_kernel(
     BLOCK_SIZE_X: tl.constexpr,
     BLOCK_SIZE_Y: tl.constexpr,
     BLOCK_SIZE_K: tl.constexpr,
+    GROUP_SIZE_M: tl.constexpr
 ):
-    pid_r = tl.program_id(axis=0)
-    pid_c = tl.program_id(axis=1)
+    pid = tl.program_id(axis=0)
+    x_tiles = (q + BLOCK_SIZE_X - 1) // BLOCK_SIZE_X
+    y_tiles = (a + BLOCK_SIZE_Y - 1) // BLOCK_SIZE_Y
+
+    group_id = pid // (GROUP_SIZE_M * x_tiles)
+    first_pid_m = group_id * GROUP_SIZE_M
+    group_size_m = min(y_tiles - first_pid_m, GROUP_SIZE_M)
+
+    pid_in_group = pid % (GROUP_SIZE_M * x_tiles)
+    pid_r = first_pid_m + (pid_in_group % group_size_m)
+    pid_c = pid_in_group // group_size_m
 
     out = tl.zeros((BLOCK_SIZE_Y, BLOCK_SIZE_X), dtype=tl.float32)
 
@@ -71,8 +81,7 @@ def matmul(A: torch.Tensor, B: torch.Tensor) -> torch.Tensor:
     assert b == p, "inputs must have the same inner dimension"
     assert A.is_cuda and B.is_cuda, "inputs must be on a CUDA device"
 
-    grid = lambda meta: (triton.cdiv(a, meta["BLOCK_SIZE_Y"]),
-                         triton.cdiv(q, meta["BLOCK_SIZE_X"]))
+    grid = lambda meta: (triton.cdiv(a, meta["BLOCK_SIZE_Y"])*triton.cdiv(q, meta["BLOCK_SIZE_X"]),)
     _matmul_kernel[grid](
             A, 
             B,
@@ -81,10 +90,11 @@ def matmul(A: torch.Tensor, B: torch.Tensor) -> torch.Tensor:
             B.stride(0), B.stride(1), 
             C.stride(0), C.stride(1), 
             a, b, q,
-            BLOCK_SIZE_X=128,
+            BLOCK_SIZE_X=64,
             BLOCK_SIZE_Y=128,
-            BLOCK_SIZE_K=32,
-            num_stages=4,
+            BLOCK_SIZE_K=64,
+            GROUP_SIZE_M=1,
+            num_stages=3,
             num_warps=8
     )
     return C
