@@ -64,7 +64,7 @@ def matmul(A: torch.Tensor, B: torch.Tensor) -> torch.Tensor:
     a,b = A.shape
     p,q = B.shape
     C = torch.zeros((a,q), device="cuda")
-    assert b == p, "inputs must have the inner dimension"
+    assert b == p, "inputs must have the same inner dimension"
     assert A.is_cuda and B.is_cuda, "inputs must be on a CUDA device"
 
     grid = lambda meta: (triton.cdiv(a, meta["BLOCK_SIZE_Y"]),
