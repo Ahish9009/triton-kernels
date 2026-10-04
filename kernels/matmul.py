@@ -93,7 +93,7 @@ def matmul(A: torch.Tensor, B: torch.Tensor) -> torch.Tensor:
             BLOCK_SIZE_X=64,
             BLOCK_SIZE_Y=128,
             BLOCK_SIZE_K=64,
-            GROUP_SIZE_M=1,
+            GROUP_SIZE_M=2,
             num_stages=3,
             num_warps=8
     )
