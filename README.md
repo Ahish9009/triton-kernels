@@ -7,28 +7,28 @@ Benchmarks below were measured on a single **NVIDIA RTX 6000 Ada** (48 GB).
 
 ## Kernels
 
-| Kernel | Op | Source | Test | Benchmark |
-|--------|----|--------|------|-----------|
-| `vector_add` | `x + y` | [vector_add.py](kernels/vector_add.py) | [test](tests/test_vector_add.py) | [bench](benchmarks/bench_vector_add.py) |
-| `vector_subtract` | `x - y` | [vector_subtract.py](kernels/vector_subtract.py) | [test](tests/test_vector_subtract.py) | [bench](benchmarks/bench_vector_subtract.py) |
-| `matmul_naive` | `A @ B` | [matmul_naive.py](kernels/matmul_naive.py) | [test](tests/test_matmul_naive.py) | [bench](benchmarks/bench_matmul_naive.py) |
-| `matmul` | `A @ B` (tiled) | [matmul.py](kernels/matmul.py) | [test](tests/test_matmul.py) | [bench](benchmarks/bench_matmul.py) |
-| `fused_vector_add_softmax` | `softmax(x + y)` (row-wise) | [fused_vector_add_softmax.py](kernels/fused_vector_add_softmax.py) | [test](tests/test_fused_vector_add_softmax.py) | [bench](benchmarks/bench_fused_vector_add_softmax.py) |
+| # | Kernel | Op | Source | Test | Benchmark |
+|:-:|--------|----|--------|------|-----------|
+| 1 | <h3><code>vector_add</code></h3> | `x + y` | [vector_add.py](kernels/vector_add.py) | [test](tests/test_vector_add.py) | [bench](benchmarks/bench_vector_add.py) |
+| 2 | <h3><code>vector_subtract</code></h3> | `x - y` | [vector_subtract.py](kernels/vector_subtract.py) | [test](tests/test_vector_subtract.py) | [bench](benchmarks/bench_vector_subtract.py) |
+| 3 | <h3><code>matmul_naive</code></h3> | `A @ B` | [matmul_naive.py](kernels/matmul_naive.py) | [test](tests/test_matmul_naive.py) | [bench](benchmarks/bench_matmul_naive.py) |
+| 4 | <h3><code>matmul</code></h3> | `A @ B` (tiled) | [matmul.py](kernels/matmul.py) | [test](tests/test_matmul.py) | [bench](benchmarks/bench_matmul.py) |
+| 5 | <h3><code>fused_vector_add_softmax</code></h3> | `softmax(x + y)` (row-wise) | [fused_vector_add_softmax.py](kernels/fused_vector_add_softmax.py) | [test](tests/test_fused_vector_add_softmax.py) | [bench](benchmarks/bench_fused_vector_add_softmax.py) |
 
-### `vector_add` — element-wise `x + y`
+### 1. `vector_add` — element-wise `x + y`
 
 Both Triton and PyTorch are memory-bandwidth-bound and plateau around ~815 GB/s —
 as expected for an op that does one add per two loads and a store.
 
 ![vector_add benchmark](docs/vector-add-performance.png)
 
-### `vector_subtract` — element-wise `x - y`
+### 2. `vector_subtract` — element-wise `x - y`
 
 Same bandwidth-bound profile as add; the Triton kernel matches the PyTorch baseline.
 
 ![vector_subtract benchmark](docs/vector-subtract-performance.png)
 
-### `matmul_naive` — matrix multiply `A @ B`
+### 3. `matmul_naive` — matrix multiply `A @ B`
 
 A straightforward first-pass matmul: one program instance per output element,
 each looping over the shared inner dimension in `BLOCK_SIZE` chunks and
@@ -38,7 +38,7 @@ naive implementation leaves on the table (and the baseline to optimize against).
 
 ![matmul_naive benchmark](docs/matmul_naive-performance.png)
 
-### `matmul` — tiled matrix multiply `A @ B`
+### 4. `matmul` — tiled matrix multiply `A @ B`
 
 A proper tiled implementation: each program computes a `BLOCK_SIZE_Y × BLOCK_SIZE_X`
 output tile, looping over the inner dimension in `BLOCK_SIZE_K` chunks and
@@ -65,7 +65,7 @@ single config has to win everywhere:
 |:---:|:---:|
 | ![matmul tuned config](docs/matmul-blocks-c.png) | ![autotuned matmul](docs/matmul-autotuned.png) |
 
-### `fused_vector_add_softmax` — row-wise `softmax(x + y)`
+### 5. `fused_vector_add_softmax` — row-wise `softmax(x + y)`
 
 Fuses the element-wise add and a numerically stable (max-subtracting) softmax into
 a single kernel: one program per row, using the online-softmax recurrence to get
