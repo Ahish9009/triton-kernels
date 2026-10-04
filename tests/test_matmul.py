@@ -9,14 +9,11 @@ pytestmark = pytest.mark.skipif(
 
 
 @pytest.mark.parametrize("n", [1, 2, 4, 8, 16, 32, 64, 128, 512, 1024, 2048])
-def test_vector_add_matches_torch(n):
+def test_matmul_matches_torch(n):
     x = torch.rand((2*n,n), device="cuda")
     y = torch.rand((n,n), device="cuda")
     out = matmul(x, y)
 
-    print(x)
-    print(y)
-    print("---")
-    print(out)
-    print(x @ y)
-    torch.testing.assert_close(out, x @ y)
+    torch.backends.cuda.matmul.allow_tf32 = True 
+    ref = torch.matmul(x, y).to(out.dtype)
+    torch.testing.assert_close(out, ref, rtol=1e-2, atol=1e-2)

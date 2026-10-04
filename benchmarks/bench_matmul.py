@@ -9,6 +9,7 @@ import triton
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from kernels import matmul
+torch.backends.cuda.matmul.allow_tf32 = True 
 
 
 @triton.testing.perf_report(

@@ -21,11 +21,13 @@ def _matmul_kernel(
     BLOCK_SIZE_X: tl.constexpr,
     BLOCK_SIZE_Y: tl.constexpr,
     BLOCK_SIZE_K: tl.constexpr,
+    num_stages=4,
+    num_warps=8
 ):
     pid_r = tl.program_id(axis=0)
     pid_c = tl.program_id(axis=1)
 
-    out = tl.zeros((BLOCK_SIZE_Y, BLOCK_SIZE_X), dtype=tl.float64)
+    out = tl.zeros((BLOCK_SIZE_Y, BLOCK_SIZE_X), dtype=tl.float32)
     for k in range(0,b,BLOCK_SIZE_K):
         A_cols = tl.arange(0, BLOCK_SIZE_K) + k
         A_rows = tl.arange(0, BLOCK_SIZE_Y) + pid_r*BLOCK_SIZE_Y
@@ -46,7 +48,7 @@ def _matmul_kernel(
         B_offsets = B_rows*B_stride_rows + B_cols*B_stride_cols
 
         B = tl.load(B_ptr + B_offsets, mask=mask_B_rows&mask_B_cols)
-        out += tl.dot(A, B, input_precision="ieee")
+        out += tl.dot(A, B)
 
     out_rows_offset = tl.arange(0, BLOCK_SIZE_Y) + pid_r*BLOCK_SIZE_Y
     out_cols_offset = tl.arange(0, BLOCK_SIZE_X) + pid_c*BLOCK_SIZE_X
@@ -77,9 +79,9 @@ def matmul(A: torch.Tensor, B: torch.Tensor) -> torch.Tensor:
             B.stride(0), B.stride(1), 
             C.stride(0), C.stride(1), 
             a, b, q,
-            BLOCK_SIZE_X=32,
-            BLOCK_SIZE_Y=32,
-            BLOCK_SIZE_K=32
+            BLOCK_SIZE_X=64,
+            BLOCK_SIZE_Y=64,
+            BLOCK_SIZE_K=64
     )
     return C
 
