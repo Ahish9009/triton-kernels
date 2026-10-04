@@ -6,6 +6,20 @@ import triton
 import triton.language as tl
 
 
+@triton.autotune(
+    configs=[
+        # small / mid sizes: smaller tiles keep enough programs in flight
+        triton.Config({"BLOCK_SIZE_Y": 64, "BLOCK_SIZE_X": 128, "BLOCK_SIZE_K": 64, "GROUP_SIZE_M": 1}, num_stages=3, num_warps=8),
+        triton.Config({"BLOCK_SIZE_Y": 64, "BLOCK_SIZE_X": 128, "BLOCK_SIZE_K": 32, "GROUP_SIZE_M": 8}, num_stages=4, num_warps=4),
+        triton.Config({"BLOCK_SIZE_Y": 64, "BLOCK_SIZE_X": 128, "BLOCK_SIZE_K": 32, "GROUP_SIZE_M": 4}, num_stages=4, num_warps=4),
+        triton.Config({"BLOCK_SIZE_Y": 128, "BLOCK_SIZE_X": 64, "BLOCK_SIZE_K": 32, "GROUP_SIZE_M": 1}, num_stages=4, num_warps=4),
+        # large sizes: bigger tiles maximize data reuse
+        triton.Config({"BLOCK_SIZE_Y": 128, "BLOCK_SIZE_X": 128, "BLOCK_SIZE_K": 32, "GROUP_SIZE_M": 4}, num_stages=4, num_warps=4),
+        triton.Config({"BLOCK_SIZE_Y": 128, "BLOCK_SIZE_X": 128, "BLOCK_SIZE_K": 32, "GROUP_SIZE_M": 8}, num_stages=4, num_warps=8),
+        triton.Config({"BLOCK_SIZE_Y": 128, "BLOCK_SIZE_X": 128, "BLOCK_SIZE_K": 64, "GROUP_SIZE_M": 4}, num_stages=4, num_warps=8),
+    ],
+    key=["a", "b", "q"],
+)
 @triton.jit
 def _matmul_kernel(
     A_ptr,
@@ -81,21 +95,16 @@ def matmul(A: torch.Tensor, B: torch.Tensor) -> torch.Tensor:
     assert b == p, "inputs must have the same inner dimension"
     assert A.is_cuda and B.is_cuda, "inputs must be on a CUDA device"
 
+    # block sizes / stages / warps are supplied by @triton.autotune per shape
     grid = lambda meta: (triton.cdiv(a, meta["BLOCK_SIZE_Y"])*triton.cdiv(q, meta["BLOCK_SIZE_X"]),)
     _matmul_kernel[grid](
-            A, 
+            A,
             B,
             C,
-            A.stride(0), A.stride(1), 
-            B.stride(0), B.stride(1), 
-            C.stride(0), C.stride(1), 
+            A.stride(0), A.stride(1),
+            B.stride(0), B.stride(1),
+            C.stride(0), C.stride(1),
             a, b, q,
-            BLOCK_SIZE_X=64,
-            BLOCK_SIZE_Y=128,
-            BLOCK_SIZE_K=64,
-            GROUP_SIZE_M=2,
-            num_stages=3,
-            num_warps=8
     )
     return C
 
