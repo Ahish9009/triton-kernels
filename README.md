@@ -13,6 +13,7 @@ Benchmarks below were measured on a single **NVIDIA RTX 6000 Ada** (48 GB).
 | `vector_subtract` | `x - y` | [vector_subtract.py](kernels/vector_subtract.py) | [test](tests/test_vector_subtract.py) | [bench](benchmarks/bench_vector_subtract.py) |
 | `matmul_naive` | `A @ B` | [matmul_naive.py](kernels/matmul_naive.py) | [test](tests/test_matmul_naive.py) | [bench](benchmarks/bench_matmul_naive.py) |
 | `matmul` | `A @ B` (tiled) | [matmul.py](kernels/matmul.py) | [test](tests/test_matmul.py) | [bench](benchmarks/bench_matmul.py) |
+| `fused_vector_add_softmax` | `softmax(x + y)` (row-wise) | [fused_vector_add_softmax.py](kernels/fused_vector_add_softmax.py) | [test](tests/test_fused_vector_add_softmax.py) | [bench](benchmarks/bench_fused_vector_add_softmax.py) |
 
 ### `vector_add` — element-wise `x + y`
 
@@ -63,6 +64,17 @@ single config has to win everywhere:
 | Single tuned config | Autotuned (per shape) |
 |:---:|:---:|
 | ![matmul tuned config](docs/matmul-blocks-c.png) | ![autotuned matmul](docs/matmul-autotuned.png) |
+
+### `fused_vector_add_softmax` — row-wise `softmax(x + y)`
+
+Fuses the element-wise add and a numerically stable (max-subtracting) softmax into
+a single kernel: one program per row, using the online-softmax recurrence to get
+the row max and the exp-sum in one streaming pass, then a second pass to normalize
+and write. Because `x + y` is never materialized and the softmax avoids extra
+global-memory round-trips, it beats PyTorch's unfused `softmax(x + y)` across most
+of the feature-dimension range (rows fixed at 4096, columns `N` swept).
+
+![fused add+softmax benchmark](docs/fused-vector-add-softmax-performance.png)
 
 ## Layout
 
