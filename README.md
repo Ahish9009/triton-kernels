@@ -12,6 +12,7 @@ Benchmarks below were measured on a single **NVIDIA RTX 6000 Ada** (48 GB).
 | `vector_add` | `x + y` | [vector_add.py](kernels/vector_add.py) | [test](tests/test_vector_add.py) | [bench](benchmarks/bench_vector_add.py) |
 | `vector_subtract` | `x - y` | [vector_subtract.py](kernels/vector_subtract.py) | [test](tests/test_vector_subtract.py) | [bench](benchmarks/bench_vector_subtract.py) |
 | `matmul_naive` | `A @ B` | [matmul_naive.py](kernels/matmul_naive.py) | [test](tests/test_matmul_naive.py) | [bench](benchmarks/bench_matmul_naive.py) |
+| `matmul` | `A @ B` (tiled) | [matmul.py](kernels/matmul.py) | [test](tests/test_matmul.py) | [bench](benchmarks/bench_matmul.py) |
 
 ### `vector_add` — element-wise `x + y`
 
@@ -35,6 +36,18 @@ data reuse, so it trails PyTorch's cuBLAS-backed `@` — the plot shows the gap 
 naive implementation leaves on the table (and the baseline to optimize against).
 
 ![matmul_naive benchmark](docs/matmul_naive-performance.png)
+
+### `matmul` — tiled matrix multiply `A @ B`
+
+A proper tiled implementation: each program computes a `BLOCK_SIZE_Y × BLOCK_SIZE_X`
+output tile, looping over the inner dimension in `BLOCK_SIZE_K` chunks and
+accumulating in registers with `tl.dot` (TF32 tensor cores). Because every loaded
+tile is reused across the whole output block, it's compute-bound rather than
+bandwidth-bound, and larger tiles improve the reuse further. It tracks PyTorch's
+cuBLAS `@` closely through the mid sizes and trails only at the largest matrices,
+where cuBLAS's deeper pipelining and per-shape tuning still win.
+
+![matmul benchmark](docs/matmul-performance.png)
 
 ## Layout
 
