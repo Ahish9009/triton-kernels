@@ -21,7 +21,6 @@ def _fused_vector_add_softmax_kernel(
     pid = tl.program_id(axis=0)
 
     mx = -float('inf')
-    st = False
     s = 0.
     for i in range(col_size//BLOCK_SIZE +1):
         col_offset = i*BLOCK_SIZE + tl.arange(0, BLOCK_SIZE)
