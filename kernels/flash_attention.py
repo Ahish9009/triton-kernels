@@ -49,6 +49,7 @@ def _flash_attention_kernel(
         key_idx = i * BLOCK_SIZE_X + tl.arange(0, BLOCK_SIZE_X)   # (BLOCK_X,)
         tmp = tl.where((key_idx < N)[None, :], tmp, -float('inf'))
         new_mxs = tmp.max(axis=1, keep_dims=True)
+        new_mxs = tl.maximum(new_mxs, row_mxs)
         s = tl.exp(row_mxs - new_mxs)*s + tl.exp(tmp-new_mxs).sum(axis=1, keep_dims=True)
         
         V_row_start = i*BLOCK_SIZE_X
