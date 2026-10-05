@@ -14,6 +14,7 @@ Benchmarks below were measured on a single **NVIDIA RTX 6000 Ada** (48 GB).
 | 3 | `matmul_naive` | `A @ B` | [matmul_naive.py](kernels/matmul_naive.py) | [test](tests/test_matmul_naive.py) | [bench](benchmarks/bench_matmul_naive.py) |
 | 4 | `matmul` | `A @ B` (tiled) | [matmul.py](kernels/matmul.py) | [test](tests/test_matmul.py) | [bench](benchmarks/bench_matmul.py) |
 | 5 | `fused_vector_add_softmax` | `softmax(x + y)` (row-wise) | [fused_vector_add_softmax.py](kernels/fused_vector_add_softmax.py) | [test](tests/test_fused_vector_add_softmax.py) | [bench](benchmarks/bench_fused_vector_add_softmax.py) |
+| 6 | `flash_attention` | `softmax(Q·Kᵀ / √d)·V` | [flash_attention.py](kernels/flash_attention.py) | [test](tests/test_flash_attention.py) | [bench](benchmarks/bench_flash_attention.py) |
 
 ## 1. `vector_add` — element-wise `x + y`
 
@@ -75,6 +76,21 @@ global-memory round-trips, it beats PyTorch's unfused `softmax(x + y)` across mo
 of the feature-dimension range (rows fixed at 4096, columns `N` swept).
 
 ![fused add+softmax benchmark](docs/fused-vector-add-softmax-performance.png)
+
+## 6. `flash_attention` — `softmax(Q·Kᵀ / √d)·V`
+
+Single-head, non-causal attention computed in a single pass over the K/V blocks:
+each program handles a tile of query rows and streams the key/value blocks,
+maintaining a running max, denominator, and output accumulator via the online
+(flash) softmax recurrence — so the full `N × N` attention matrix is never
+materialized. Benchmarked against PyTorch's `scaled_dot_product_attention` with
+the head dimension fixed and the sequence length `N` swept.
+
+![flash attention benchmark](docs/flash-attention-performance.png)
+
+> Note: this is an fp32, single-head comparison. PyTorch's fastest fused
+> attention kernels target fp16/bf16, so the gap here partly reflects SDPA
+> falling back to a slower fp32 path rather than a like-for-like kernel race.
 
 ## Layout
 
