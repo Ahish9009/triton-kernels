@@ -98,7 +98,7 @@ def _flash_decoding_kernel(
     tl.store(sums_ptr + pid, s, mask=(pid < N_kv))
 
 
-def flash_attention(Q: torch.Tensor, K: torch.Tensor, V: torch.Tensor) -> torch.Tensor:
+def flash_decoding(Q: torch.Tensor, K: torch.Tensor, V: torch.Tensor) -> torch.Tensor:
     """Return ``flash attention`` computed on the GPU with a Triton kernel."""
     assert K.shape == V.shape, "inputs must have the same shape"
     assert Q.is_cuda and K.is_cuda and V.is_cuda, "inputs must be on a CUDA device"

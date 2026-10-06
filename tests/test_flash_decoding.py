@@ -1,9 +1,7 @@
 import pytest
 import torch
 
-# NOTE: the public function is still named `flash_attention` in flash_decoding.py
-# (copy-paste leftover); aliasing until it's renamed to `flash_decoding`.
-from kernels.flash_decoding import flash_attention as flash_decoding
+from kernels.flash_decoding import flash_decoding
 
 pytestmark = pytest.mark.skipif(
     not torch.cuda.is_available(), reason="Triton kernels require a CUDA device"
