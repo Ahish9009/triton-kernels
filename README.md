@@ -15,6 +15,7 @@ Benchmarks below were measured on a single **NVIDIA RTX 6000 Ada** (48 GB).
 | 4 | `matmul` | `A @ B` (tiled) | [matmul.py](kernels/matmul.py) | [test](tests/test_matmul.py) | [bench](benchmarks/bench_matmul.py) |
 | 5 | `fused_vector_add_softmax` | `softmax(x + y)` (row-wise) | [fused_vector_add_softmax.py](kernels/fused_vector_add_softmax.py) | [test](tests/test_fused_vector_add_softmax.py) | [bench](benchmarks/bench_fused_vector_add_softmax.py) |
 | 6 | `flash_attention` | `softmax(Q·Kᵀ / √d)·V` | [flash_attention.py](kernels/flash_attention.py) | [test](tests/test_flash_attention.py) | [bench](benchmarks/bench_flash_attention.py) |
+| 7 | `flash_decoding` | `softmax(q·Kᵀ / √d)·V` (single query) | [flash_decoding.py](kernels/flash_decoding.py) | [test](tests/test_flash_decoding.py) | [bench](benchmarks/bench_flash_decoding.py) |
 
 ## 1. `vector_add` — element-wise `x + y`
 
@@ -91,6 +92,20 @@ the head dimension fixed and the sequence length `N` swept.
 > Note: this is an fp32, single-head comparison. PyTorch's fastest fused
 > attention kernels target fp16/bf16, so the gap here partly reflects SDPA
 > falling back to a slower fp32 path rather than a like-for-like kernel race.
+
+## 7. `flash_decoding` — `softmax(q·Kᵀ / √d)·V` (single query)
+
+The decode-time case: a single query attends over a long KV cache of length
+`N_kv`. The work is split across KV blocks in a first kernel (each emits a partial
+output plus its running max and denominator), then a second kernel combines the
+blocks with the online-softmax rescale — so a long cache is processed with high
+parallelism and never materialized. This regime is memory-bound (one query reads
+the whole cache), so throughput is reported as GB/s of K+V read, with `N_kv` swept.
+
+![flash decoding benchmark](docs/flash-decoding-performance.png)
+
+> Note: same fp32 caveat as above — SDPA's fused flash path is fp16/bf16-only, so
+> this fp32 comparison has it on a slower fallback rather than a like-for-like race.
 
 ## Layout
 
