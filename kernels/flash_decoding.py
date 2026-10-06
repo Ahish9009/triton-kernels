@@ -22,7 +22,7 @@ def _reduce_kernel(
     s = 0.
     final = tl.zeros((1, d), dtype=tl.float32)
     for i in range(tl.cdiv(N_kv, BLOCK_SIZE)):
-        cmax = tl.load(maxs_ptr + i, mask=i<N_kv, other=0.0)
+        cmax = tl.load(maxs_ptr + i, mask=i<N_kv, other=-float('inf'))
         cs = tl.load(sums_ptr + i, mask=i<N_kv, other=0.0)
 
         row_offsets = i
@@ -33,7 +33,8 @@ def _reduce_kernel(
 
         new_max = tl.maximum(mx, cmax)
         final = tl.exp(mx-new_max)*final + tl.exp(cmax-new_max)*partial_o
-        s += cs*tl.exp(cmax-new_max)
+        s = s*tl.exp(mx-new_max) + cs*tl.exp(cmax-new_max)
+        mx=new_max
 
     final /= s
     row_offsets = tl.arange(0,1)
@@ -66,33 +67,33 @@ def _flash_decoding_kernel(
     Q_mask = Q_col_offsets < d
     Q = tl.load(Q_ptr + Q_offsets, mask=Q_mask, other=0.0)
 
-    K_row_offsets = tl.arange(0, BLOCK_SIZE) + K_row_start
-    K_col_offsets = tl.arange(0, d)
-    K_mask = K_row_offsets < N_kv
+    K_row_offsets = (tl.arange(0, BLOCK_SIZE) + K_row_start)[:,None]
+    K_col_offsets = tl.arange(0, d)[None,:]
+    K_mask = (K_row_offsets < N_kv) & (K_col_offsets < d)
     K_offsets = K_row_offsets*K_str_x + K_col_offsets*K_str_y
     K = tl.load(K_ptr + K_offsets, mask=K_mask, other=-float('inf'))
 
     root_d = d**0.5
-    tmp = tl.dot(Q, tl.trans(K))/root_d # 1xBLOCK_SIZE
+    tmp = (Q*K).sum(axis=1)/root_d # 1xBLOCK_SIZE
 
     k_idx = K_row_start + tl.arange(0, BLOCK_SIZE)
     tmp = tl.where(k_idx[None, :] < N_kv, tmp, -float('inf'))
 
-    V_row_offsets = K_row_start + tl.arange(0, BLOCK_SIZE)
-    V_col_offsets = tl.arange(0, d)
-    V_mask = V_row_offsets < N_kv
+    V_row_offsets = (K_row_start + tl.arange(0, BLOCK_SIZE))[:,None]
+    V_col_offsets = tl.arange(0, d)[None,:]
+    V_mask = (V_row_offsets < N_kv) & (V_col_offsets < d)
     V_offsets = V_row_offsets*V_str_x + V_col_offsets*V_str_y
     V = tl.load(V_ptr + V_offsets, mask=V_mask, other=0.0)
 
-    mx = tmp.max(axis=1)
+    mx = tmp.max()
     tmp = tl.exp(tmp-mx)
-    s = tmp.sum(axis=1)
+    s = tmp.sum()
     partial_o = tl.dot(tmp, V) # (1xd)
     
-    out_row_offsets = pid
+    out_row_offsets = (pid)[:,None]
     out_col_offsets = tl.arange(0, d)[None,:]
-    out_mask = out_row_offsets < N_kv
-    out_offsets = out_row_offsets[:,None]*out_str_x + out_col_offsets
+    out_mask = (out_col_offsets < d) & (out_row_offsets < N_kv)
+    out_offsets = out_row_offsets*out_str_x + out_col_offsets*out_str_y
     tl.store(out_ptr + out_offsets, partial_o, mask=out_mask)
     tl.store(maxs_ptr + pid, mx, mask=(pid < N_kv))
     tl.store(sums_ptr + pid, s, mask=(pid < N_kv))
@@ -133,3 +134,4 @@ def flash_decoding(Q: torch.Tensor, K: torch.Tensor, V: torch.Tensor) -> torch.T
     )
 
     return res
+
