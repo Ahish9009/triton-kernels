@@ -6,7 +6,7 @@ from kernels.matmul_naive import matmul_naive
 from kernels.matmul import matmul
 from kernels.fused_vector_add_softmax import fused_vector_add_softmax
 from kernels.flash_attention import flash_attention
-from kernels.flash_decoding import flash_decodingn
+from kernels.flash_decoding import flash_decoding
 
 __all__ = [
     "vector_add", 
