@@ -32,3 +32,4 @@ env/
 
 # Benchmark results (generated; pulled back from the server)
 benchmark_outputs/
+sync.sh
