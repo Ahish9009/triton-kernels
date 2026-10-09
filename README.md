@@ -3,7 +3,7 @@
 GPU kernels written in [Triton](https://github.com/triton-lang/triton), each with a
 correctness test and a benchmark against its PyTorch baseline.
 
-Benchmarks below were measured on a single **NVIDIA RTX 6000 Ada** (48 GB).
+Benchmarks below were measured on an NVIDIA RTX 6000.
 
 ## Kernels
 
@@ -106,32 +106,3 @@ the whole cache), so throughput is reported as GB/s of K+V read, with `N_kv` swe
 
 > Note: same fp32 caveat as above — SDPA's fused flash path is fp16/bf16-only, so
 > this fp32 comparison has it on a slower fallback rather than a like-for-like race.
-
-## Layout
-
-```
-kernels/              # kernel implementations (one module per kernel)
-tests/                # pytest correctness tests (auto-skip without a GPU)
-benchmarks/           # benchmarks vs. PyTorch; plots -> benchmark_outputs/
-docs/                 # plots shown in this README
-```
-
-## Usage
-
-Triton ships Linux + GPU wheels only, so kernels run on the GPU server rather than
-locally. `sync.sh` handles the round trip (files sync to the login node over shared
-NFS; commands run on the compute node via SSH `ProxyJump`):
-
-```bash
-./sync.sh push                                    # copy code to the server
-./sync.sh gpus                                    # check which GPUs are free
-./sync.sh run pytest -q                           # run the tests
-./sync.sh run python benchmarks/bench_vector_add.py   # run a benchmark
-./sync.sh pull                                    # bring plots/results back
-```
-
-Benchmarks auto-save a `.png` and `.csv` into `benchmark_outputs/`.
-
-First-time server setup is one command (`./setup.sh`): it builds the
-`triton-kernels` conda env from `environment.yml`, installs Triton, and runs the
-tests. See [setup.sh](setup.sh) and [sync.sh](sync.sh) for details.
